@@ -620,6 +620,27 @@ button {
   padding: 11px 12px;
 }
 
+.free-roam-picker {
+  display: grid;
+  gap: 8px;
+  padding: 14px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.free-roam-picker p,
+.free-roam-picker small {
+  margin: 0;
+  color: #b7c0c6;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.free-roam-picker small {
+  color: #8998a7;
+  font-size: 0.72rem;
+}
+
 .match-summary {
   display: flex;
   align-items: center;

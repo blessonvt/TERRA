@@ -30,6 +30,7 @@ import { downloadComparisonCsv, downloadComparisonPdf } from './science/report'
 import { useEarthAnalogMatches } from './science/useEarthAnalogMatches'
 import { useTerrainComparison } from './science/useTerrainComparison'
 import type { PlanetaryBody, PlanetaryLocation } from './science/model'
+import { chooseRandomSampleableLocation } from './science/randomLocation'
 import { planetaryImagerySources as mapSources } from './science/planetaryImagery'
 import { formatCoordinate, nearestNamedFeature, reverseGeocodeEarth } from './placeNames'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -516,6 +517,7 @@ function App() {
   const [selectedSiteId, setSelectedSiteId] = useState(worldSites[0].id)
   const [referenceLocation, setReferenceLocation] = useState(planetaryLocations[0])
   const [targetLocation, setTargetLocation] = useState(planetaryLocations.find((item) => item.body === 'Mars')!)
+  const [freeRoamLocation, setFreeRoamLocation] = useState<PlanetaryLocation | null>(null)
   const targetLocationRef = useRef(targetLocation)
   useEffect(() => {
     targetLocationRef.current = targetLocation
@@ -523,6 +525,7 @@ function App() {
   const [tutorialOpen, setTutorialOpen] = useState(false)
   const [mapFocus, setMapFocus] = useState<ExplorationLandmark | null>(null)
   const selectFreeRoamLocation = useCallback((location: PlanetaryLocation) => {
+    setFreeRoamLocation(location)
     setReferenceLocation(location)
     const currentTarget = targetLocationRef.current
     const samePoint = currentTarget.body === location.body
@@ -535,16 +538,33 @@ function App() {
     }
   }, [])
   const selectEarthAnalog = useCallback((location: PlanetaryLocation, target: PlanetaryLocation) => {
+    setFreeRoamLocation(location)
     setReferenceLocation(location)
     setTargetLocation(target)
   }, [])
   const setReferenceById = (id: string) => {
+    if (freeRoamLocation?.id === id) {
+      setReferenceLocation(freeRoamLocation)
+      return
+    }
     const location = planetaryLocations.find((item) => item.id === id)
     if (location) setReferenceLocation(location)
   }
   const setTargetById = (id: string) => {
+    if (freeRoamLocation?.id === id) {
+      setTargetLocation(freeRoamLocation)
+      return
+    }
     const location = planetaryLocations.find((item) => item.id === id)
     if (location) setTargetLocation(location)
+  }
+  const selectRandomComparisonLocation = (side: 'reference' | 'target', body: PlanetaryBody): boolean => {
+    const current = side === 'reference' ? referenceLocation : targetLocation
+    const location = chooseRandomSampleableLocation(planetaryLocations, body, current.id)
+    if (!location) return false
+    if (side === 'reference') setReferenceLocation(location)
+    else setTargetLocation(location)
+    return true
   }
   const selectEarthSite = (id: string) => {
     const site = worldSites.find((item) => item.id === id)
@@ -602,7 +622,7 @@ function App() {
             <Route path="/free-roam" element={<FreeRoamPage locations={planetaryLocations} comparisonTarget={targetLocation} onSelectLocation={selectFreeRoamLocation} onSelectAnalog={selectEarthAnalog} focusLandmark={mapFocus} onClearFocus={setMapFocus} />} />
             <Route path="/discover" element={<DiscoveryPage worldSites={worldSites} selectedSiteId={selectedSiteId} onSelectSite={selectEarthSite} />} />
             <Route path="/history" element={<HistoryPage onOpenLandmark={openLandmarkOnMap} />} />
-            <Route path="/compare" element={<ComparisonPage locations={planetaryLocations} reference={referenceLocation} target={targetLocation} onChangeReference={setReferenceById} onChangeTarget={setTargetById} />} />
+            <Route path="/compare" element={<ComparisonPage locations={planetaryLocations} reference={referenceLocation} target={targetLocation} freeRoamLocation={freeRoamLocation} onChangeReference={setReferenceById} onChangeTarget={setTargetById} onSelectRandomLocation={selectRandomComparisonLocation} />} />
             <Route path="/reports" element={<ReportsPage reference={referenceLocation} target={targetLocation} />} />
             <Route path="/methodology" element={<DatasetsPage />} />
             <Route path="/data-methodology" element={<DatasetsPage />} />
