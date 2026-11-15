@@ -12,6 +12,12 @@
   margin-top: 20px;
 }
 
+.evidence-tile-link {
+  display: inline-block;
+  margin: 3px 8px 0 0;
+  font-size: 0.75rem;
+}
+
 .discovery-selection .btn {
   margin-top: 4px;
 }
@@ -1283,6 +1289,78 @@ button {
   margin-top: 18px;
 }
 
+.mission-site-picker {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.32fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.mission-site-picker span {
+  color: #e0cba3;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.mission-site-picker select {
+  min-width: 0;
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 9px;
+  background: #10171e;
+  color: #f1f4f7;
+  font: inherit;
+}
+
+.mission-test-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.mission-test-card {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(8, 13, 20, 0.42);
+}
+
+.mission-test-card h4 {
+  margin-top: 10px;
+}
+
+.mission-test-card p {
+  color: #c5ced8;
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.mission-test-alignment {
+  display: grid;
+  gap: 5px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mission-test-alignment strong {
+  color: #f0d7a3;
+  font-size: 0.82rem;
+}
+
+.mission-test-alignment small {
+  color: #aeb8bf;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.mission-reference {
+  margin-top: 14px;
+}
+
 .mission-limit,
 .evidence-caveat {
   border-left: 3px solid #d5aa64;
@@ -1291,11 +1369,16 @@ button {
 }
 
 .evidence-source-grid,
-.evidence-formula-grid {
+.evidence-formula-grid,
+.evidence-point-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   margin-top: 16px;
+}
+
+.evidence-point-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .evidence-formula-grid {
@@ -1303,7 +1386,8 @@ button {
 }
 
 .evidence-source-grid article,
-.evidence-formula-grid article {
+.evidence-formula-grid article,
+.evidence-point-grid article {
   min-width: 0;
   padding: 14px;
   border: 1px solid rgba(255, 255, 255, 0.09);
@@ -1312,13 +1396,15 @@ button {
 }
 
 .evidence-source-grid h4,
-.evidence-formula-grid h4 {
+.evidence-formula-grid h4,
+.evidence-point-grid h4 {
   margin: 10px 0;
   color: #e8edf2;
 }
 
 .evidence-source-grid p,
 .evidence-formula-grid p,
+.evidence-point-grid p,
 .evidence-panel > p {
   color: #c5ced8;
   font-size: 0.78rem;
@@ -1719,9 +1805,103 @@ button {
   font-size: 0.78rem;
 }
 
+.location-surface-preview {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(8, 13, 20, 0.48);
+}
+
+.location-surface-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.location-surface-heading > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.location-surface-heading strong {
+  color: #e7ebed;
+  font-size: 0.95rem;
+}
+
+.location-surface-heading small {
+  color: #aeb8bf;
+  font-size: 0.76rem;
+}
+
+.location-surface-heading a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  color: #b7d8f0;
+  font-size: 0.72rem;
+}
+
+.location-surface-map {
+  position: relative;
+  width: 100%;
+  height: clamp(230px, 26vw, 340px);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9px;
+  background: #101820;
+}
+
+.location-surface-marker {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border: 2px solid #fff4d8;
+  border-radius: 50%;
+  background: rgba(197, 93, 59, 0.38);
+  box-shadow: 0 0 0 5px rgba(197, 93, 59, 0.28), 0 2px 10px #000;
+}
+
+.location-surface-marker::before,
+.location-surface-marker::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: block;
+  background: #fff4d8;
+  content: '';
+  transform: translate(-50%, -50%);
+}
+
+.location-surface-marker::before {
+  width: 42px;
+  height: 1px;
+}
+
+.location-surface-marker::after {
+  width: 1px;
+  height: 42px;
+}
+
+.location-surface-preview .image-attribution {
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
 .location-images > p {
   color: #b7c0c6;
   font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.image-archive-note {
+  border-left: 2px solid rgba(213, 170, 100, 0.65);
+  padding-left: 9px;
+  font-size: 0.76rem !important;
 }
 
 .image-gallery {
@@ -1856,7 +2036,7 @@ button {
 
 .map-location-picker {
   display: grid;
-  grid-template-columns: minmax(160px, auto) minmax(220px, 430px);
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   margin-top: 10px;
@@ -1864,6 +2044,16 @@ button {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   background: rgba(16, 23, 30, 0.82);
+}
+
+.map-location-picker label {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+}
+
+.map-location-picker .btn {
+  justify-self: end;
 }
 
 .map-location-picker span {
@@ -2332,12 +2522,20 @@ button {
   .gravity-values,
   .visual-comparison-grid,
   .evidence-source-grid,
-  .evidence-formula-grid {
+  .evidence-formula-grid,
+  .evidence-point-grid,
+  .mission-test-grid {
     grid-template-columns: 1fr;
   }
 
-  .image-caption {
+  .image-caption,
+  .location-surface-heading {
     flex-direction: column;
+  }
+
+  .mission-site-picker {
+    grid-template-columns: 1fr;
+    gap: 7px;
   }
 
   .map-layer-count {

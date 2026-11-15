@@ -4,6 +4,7 @@ import LocationImages from './LocationImages'
 import { downloadComparisonCsv, downloadComparisonPdf } from './science/report'
 import { useTerrainComparison, emptyTerrainMetrics } from './science/useTerrainComparison'
 import { sourceDefinitions, sourceElevationRanges } from './science/dataSources'
+import { createMissionTestPlan, missionTestAlignment } from './science/missionTesting'
 import type { MetricKey, PlanetaryLocation, TerrainMetrics, TerrainSample } from './science/model'
 
 type Props = {
@@ -239,6 +240,19 @@ export default function ComparisonPage({
   const selectedEarthAnalog = reference.body === 'Earth'
     ? reference
     : target.body === 'Earth' ? target : null
+  const earthLocations = locations.filter((location) => location.body === 'Earth')
+  const missionSite = selectedEarthAnalog ?? earthLocations[0] ?? null
+  const missionPlan = missionSite
+    ? createMissionTestPlan(missionSite, selectedEarthAnalog ? comparisons : [])
+    : []
+  const missionSiteOptions = selectedEarthAnalog
+    ? [selectedEarthAnalog, ...earthLocations.filter((location) => location.id !== selectedEarthAnalog.id)]
+    : earthLocations
+  const selectMissionSite = (id: string) => {
+    if (reference.body === 'Earth') onChangeReference(id)
+    else if (target.body === 'Earth') onChangeTarget(id)
+    else onChangeReference(id)
+  }
   const handleExport = (format: 'csv' | 'pdf') => {
     try {
       if (format === 'csv') downloadComparisonCsv(exportData)
@@ -399,37 +413,62 @@ export default function ComparisonPage({
         <LocationImages location={target} />
       </section>
       <p className="imagery-limit-note">
-        Orbital map imagery is available at the selected coordinate in Free Roam. NASA archive images are named-location media, not georeferenced ground photos; TERRA does not have coordinate-matched ground-level imagery for arbitrary sites.
+        The surface maps above are centered on each selected coordinate and visibly mark the sample point. NASA archive images are related named-location records, not georeferenced ground photos; TERRA does not have coordinate-matched ground-level imagery for arbitrary sites.
       </p>
 
       <section className="mission-protocol panel-block">
-        <div className="panel-head"><Satellite size={18} /><h3>Mission Testing &amp; Validation Protocol</h3></div>
-        {selectedEarthAnalog ? (
+        <div className="panel-head"><Satellite size={18} /><h3>Mission Testing &amp; Validation Options</h3></div>
+        {missionSite && (
           <>
-            <p className="mission-site">Earth field site under review: <strong>{selectedEarthAnalog.name}</strong> · {selectedEarthAnalog.terrainClass}</p>
-            {selectedEarthAnalog.id === 'atacama' ? (
-              <>
-                <h4>Remote rover operations rehearsal</h4>
-                <p>
-                  A published Atacama field study simulated remote Mars rover operations for future ESA missions. A defensible test plan at this site can rehearse route planning, image-based terrain interpretation, delayed teleoperation, and operator-to-rover handoffs.
-                </p>
-                <a href="https://doi.org/10.2514/6.2014-1861" target="_blank" rel="noreferrer">
-                  Woods &amp; Shaw, “Simulating Remote Mars Rover Operations in the Atacama Desert for Future ESA Missions” (2014)
-                </a>
-                <p className="mission-limit">
-                  This evidence supports operations simulation, not equivalence in Mars wheel traction, basaltic regolith, drilling, thermal behavior, or atmosphere. Those hardware tests require site-specific soil mechanics and environmental measurements that TERRA does not provide.
-                </p>
-              </>
-            ) : (
-              <p>
-                No site-specific mission-testing protocol citation is integrated for this location. TERRA’s terrain descriptors can help scope field reconnaissance, but they do not establish soil mechanics, instrument performance, or mission readiness.
+            <label className="mission-site-picker">
+              <span>Earth field site</span>
+              <select value={missionSite.id} onChange={(event) => selectMissionSite(event.target.value)}>
+                {missionSiteOptions.map((location) => (
+                  <option key={location.id} value={location.id}>{location.name} · {location.terrainClass}</option>
+                ))}
+              </select>
+            </label>
+            <p className="mission-site">
+              {selectedEarthAnalog ? 'Field site paired with the current live comparison:' : 'Example field site; select it as an Earth side of the comparison to calculate terrain-alignment scores:'}
+              {' '}<strong>{missionSite.name}</strong> · {missionSite.latitude.toFixed(5)}°, {missionSite.longitude.toFixed(5)}° · {missionSite.terrainClass}
+            </p>
+            <p>
+              These are practical candidate field exercises based on the site description and measured terrain. They are test ideas, not claims that a mission task is possible or already validated here.
+            </p>
+            <div className="mission-test-grid">
+              {missionPlan.map((test) => {
+                const alignment = missionTestAlignment(test)
+                const scoredKeys = new Set(test.scoredMetrics.map((metric) => metric.key))
+                const metricLabels = test.scoredMetrics.map((metric) => metricDetails[metric.key].label)
+                const missingMetricLabels = test.metricKeys
+                  .filter((key) => !scoredKeys.has(key))
+                  .map((key) => metricDetails[key].label)
+                return (
+                  <article className="mission-test-card" key={test.id}>
+                    <span className="tile-tag">{test.metricKeys.length ? 'DEM terrain evidence' : 'Field protocol candidate'}</span>
+                    <h4>{test.title}</h4>
+                    <p><strong>Earth exercise:</strong> {test.earthExercise}</p>
+                    <p><strong>Exploration use:</strong> {test.explorationUse}</p>
+                    <div className="mission-test-alignment">
+                      <strong>{alignment === null ? 'Not scored' : `${alignment.toFixed(1)}% terrain-evidence alignment`}</strong>
+                      {test.metricKeys.length > 0
+                        ? <small>{test.scoredMetrics.length} of {test.metricKeys.length} relevant DEM metrics available{metricLabels.length ? ` · scored: ${metricLabels.join(', ')}` : ''}{missingMetricLabels.length ? ` · unavailable: ${missingMetricLabels.join(', ')}` : ''}. Mean of available metric similarity scores; missing metrics are excluded.</small>
+                        : <small>No integrated measurement directly scores this field activity. Gather the site-specific measurements described above.</small>}
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+            {missionSite.id === 'atacama' && (
+              <p className="mission-reference">
+                Published operations-rehearsal example: Woods &amp; Shaw, “Simulating Remote Mars Rover Operations in the Atacama Desert for Future ESA Missions” (2014).{' '}
+                <a href="https://doi.org/10.2514/6.2014-1861" target="_blank" rel="noreferrer">Open citation</a>
               </p>
             )}
+            <p className="mission-limit">
+              Percentages report agreement in the listed DEM-derived terrain metrics only. They are not percentages of activities that can be performed, mission success probabilities, or passability estimates. A low score can still make a site useful as a contrast or control. Temperature, illumination, soil mechanics, mineralogy, water/ice, dust, biology, subsurface features, and instrument performance require separate, site- and season-specific measurements.
+            </p>
           </>
-        ) : (
-          <p>
-            Select an Earth field site to review analog-testing context. A lunar or martian map point is remote-sensing context, not an accessible terrestrial test site.
-          </p>
         )}
       </section>
 
@@ -489,9 +528,14 @@ export default function ComparisonPage({
         </div>
         <div className="source-provenance">
           <h4><Database size={16} /> Sample provenance</h4>
-          {[referenceSample, targetSample].filter((sample): sample is TerrainSample => sample !== null).map((sample) => (
-            <p key={`${sample.body}-${sample.coordinate.latitude}-${sample.coordinate.longitude}`}>
-              <strong>{sample.body}:</strong> <a href={sample.source.url} target="_blank" rel="noreferrer">{sample.source.title}</a>
+          {[
+            { label: 'Reference', location: reference, sample: referenceSample },
+            { label: 'Target', location: target, sample: targetSample },
+          ].map(({ label, location, sample }) => sample && (
+            <p key={`${label}-${sample.body}-${sample.coordinate.latitude}-${sample.coordinate.longitude}`}>
+              <strong>{label} · {location.name} ({sample.body})</strong>
+              {' · sampled at '}{sample.coordinate.latitude.toFixed(5)}°, {sample.coordinate.longitude.toFixed(5)}°
+              {' · source: '}<a href={sample.source.url} target="_blank" rel="noreferrer">{sample.source.title}</a>
               {' · catalog reference: '}{sample.source.catalogId}
               {' · upstream catalog: '}<a href={sample.source.catalogUrl} target="_blank" rel="noreferrer">product record</a>
               {' · '}~{sample.source.pixelSpacingMeters.toFixed(0)} m service pixel spacing at this latitude
@@ -508,8 +552,33 @@ export default function ComparisonPage({
       <section className="panel-block evidence-panel">
         <div className="panel-head"><Database size={18} /><h3>Evidence &amp; Data Traceability</h3></div>
         <p>
-          Values below are sampled from the linked live services. A source catalog reference is not proof of per-pixel lineage: the hosted lunar and Mars layers are blends, and they do not return a contributing PDS file ID for each sample.
+          Each comparison point below identifies the selected place or arbitrary coordinate, the exact DEM sample coordinate, and the live service response. A catalog reference is not proof of per-pixel lineage: the hosted lunar and Mars layers are blends, and they do not return a contributing PDS file ID for each sample.
         </p>
+        <div className="evidence-point-grid">
+          {[
+            { label: 'Reference point', location: reference, sample: referenceSample, error: referenceError },
+            { label: 'Target point', location: target, sample: targetSample, error: targetError },
+          ].map(({ label, location, sample, error }) => (
+            <article key={label}>
+              <span className="tile-tag">{label} · {location.body}</span>
+              <h4>{location.name}</h4>
+              <p><strong>Selected coordinates:</strong> {location.latitude.toFixed(5)}°, {location.longitude.toFixed(5)}°</p>
+              <p><strong>Selection:</strong> {location.isCoordinatePick ? 'Map-picked coordinate; sampled live' : 'Catalog location coordinate; sampled live'}</p>
+              <p><strong>Sample status:</strong> {error ? `Unavailable · ${error}` : loading ? 'Request in progress' : sample ? `${sample.metrics.validSampleCount}/9 valid DEM cells` : 'No sample returned'}</p>
+              {sample && (
+                <>
+                  <p><strong>Sample-window center:</strong> {sample.coordinate.latitude.toFixed(5)}°, {sample.coordinate.longitude.toFixed(5)}° · 1 km window, 3×3 samples at 500 m spacing</p>
+                  <p><strong>Sample service:</strong> <a href={sample.source.url} target="_blank" rel="noreferrer">{sample.source.dataset}</a></p>
+                  {sample.source.sampledTileIds.length > 0
+                    ? <p><strong>DEM tiles read:</strong> {sample.source.sampledTileIds.map((tileId) => (
+                        <a className="evidence-tile-link" key={tileId} href={`${sample.source.url}/tile/${tileId}`} target="_blank" rel="noreferrer">{tileId}</a>
+                      ))}</p>
+                    : <p><strong>Tile lineage:</strong> The Earth point-sampling service does not return a source-granule or tile ID for the sampled coordinate.</p>}
+                </>
+              )}
+            </article>
+          ))}
+        </div>
         <div className="evidence-source-grid">
           {(Object.keys(sourceDefinitions) as Array<keyof typeof sourceDefinitions>).map((body) => {
             const source = sourceDefinitions[body]

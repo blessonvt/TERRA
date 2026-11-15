@@ -41,6 +41,7 @@ export type TerrainSample = {
     catalogId: string
     catalogUrl: string
     lineageNote: string
+    sampledTileIds: string[]
   }
 }
 

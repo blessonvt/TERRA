@@ -17,6 +17,7 @@ import {
   RefreshCw,
   Scale,
   Satellite,
+  Shuffle,
 } from 'lucide-react'
 import type * as maplibregl from 'maplibre-gl'
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
@@ -29,6 +30,7 @@ import { downloadComparisonCsv, downloadComparisonPdf } from './science/report'
 import { useEarthAnalogMatches } from './science/useEarthAnalogMatches'
 import { useTerrainComparison } from './science/useTerrainComparison'
 import type { PlanetaryBody, PlanetaryLocation } from './science/model'
+import { planetaryImagerySources as mapSources } from './science/planetaryImagery'
 import { formatCoordinate, nearestNamedFeature, reverseGeocodeEarth } from './placeNames'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
@@ -73,44 +75,6 @@ type PlaceResolution = {
   source: string
   error?: string
   attributionUrl?: string
-}
-
-const mapSources: Record<MapBody, {
-  tiles: string
-  tileSize: number
-  maxZoom: number
-  center: [number, number]
-  zoom: number
-  attribution: string
-  description: string
-}> = {
-  Earth: {
-    tiles: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    tileSize: 256,
-    maxZoom: 19,
-    center: [10, 20],
-    zoom: 1.2,
-    attribution: 'Imagery: Esri, Vantor, Earthstar Geographics, and the GIS User Community',
-    description: 'Satellite and aerial imagery from Esri World Imagery.',
-  },
-  Moon: {
-    tiles: 'https://astro.arcgis.com/arcgis/rest/services/OnMoon/LRO_WAC/MapServer/tile/{z}/{y}/{x}',
-    tileSize: 256,
-    maxZoom: 8,
-    center: [0, 0],
-    zoom: 0.2,
-    attribution: 'LROC WAC: ASU, NASA PDS; hosted by Esri',
-    description: 'Lunar Reconnaissance Orbiter Camera Wide Angle Camera global mosaic.',
-  },
-  Mars: {
-    tiles: 'https://astro.arcgis.com/arcgis/rest/services/OnMars/MDIM/MapServer/tile/{z}/{y}/{x}',
-    tileSize: 256,
-    maxZoom: 8,
-    center: [0, 0],
-    zoom: 0.2,
-    attribution: 'Mars MDIM: NASA, JPL, USGS; hosted by Esri',
-    description: 'NASA Ames and USGS Viking-based Mars Digital Image Model mosaic.',
-  },
 }
 
 const heroScenes = [
@@ -366,6 +330,28 @@ const worldSites: WorldSite[] = [
     terrainClass: 'Arid plateau',
     description: 'Plateau surfaces and sparse vegetation provide a useful comparison for dry, old continental terrain.',
   },
+  {
+    id: 'haughton',
+    name: 'Haughton Impact Crater',
+    country: 'Canada',
+    region: 'Devon Island, Nunavut',
+    continent: 'North America',
+    latitude: 75.37,
+    longitude: -89.68,
+    terrainClass: 'Arctic impact structure',
+    description: 'A polar-desert impact structure with exposed rock and periglacial conditions; useful for crater-mapping and cold-environment field procedures, not as a temperature or regolith match.',
+  },
+  {
+    id: 'lonar',
+    name: 'Lonar Crater',
+    country: 'India',
+    region: 'Deccan basalt province',
+    continent: 'Asia',
+    latitude: 19.98,
+    longitude: 76.51,
+    terrainClass: 'Basaltic impact crater',
+    description: 'An impact structure excavated in basalt, offering a focused setting for crater morphology and impact-material mapping; local lake chemistry is not a planetary-water analog by itself.',
+  },
 ]
 
 const planetaryZones: PlanetaryZone[] = [
@@ -408,6 +394,86 @@ const planetaryZones: PlanetaryZone[] = [
     longitude: -47.4,
     terrainClass: 'Highland ridge field',
     description: 'Bright highlands, ejecta deposits, and heterogeneous slopes create a lunar highland analog case.',
+  },
+  {
+    id: 'copernicus',
+    name: 'Copernicus Crater',
+    planet: 'Moon',
+    region: 'Imbrian highlands',
+    latitude: 9.62,
+    longitude: -20.08,
+    terrainClass: 'Complex impact crater',
+    description: 'Terraced walls, central peaks, and ejecta make this a useful site for crater-morphology and slope-mapping comparisons.',
+  },
+  {
+    id: 'tycho',
+    name: 'Tycho Crater',
+    planet: 'Moon',
+    region: 'Southern highlands',
+    latitude: -43.31,
+    longitude: -11.36,
+    terrainClass: 'Fresh impact crater',
+    description: 'A prominent young crater with extensive ejecta, useful for impact mapping and rough-terrain navigation studies within the DEM latitude coverage.',
+  },
+  {
+    id: 'mare-serenitatis',
+    name: 'Mare Serenitatis',
+    planet: 'Moon',
+    region: 'Northeastern near side',
+    latitude: 28.0,
+    longitude: 17.5,
+    terrainClass: 'Basaltic mare plain',
+    description: 'A broad mare surface for comparing low-relief volcanic plains with localized wrinkle ridges and crater hazards.',
+  },
+  {
+    id: 'jezero',
+    name: 'Jezero Crater',
+    planet: 'Mars',
+    region: 'Isidis Planitia margin',
+    latitude: 18.4,
+    longitude: 77.7,
+    terrainClass: 'Delta-bearing impact basin',
+    description: 'A crater and delta setting for mapping fan-shaped deposits and basin relief; DEM morphology does not establish past habitability or biosignatures.',
+  },
+  {
+    id: 'valles-marineris',
+    name: 'Valles Marineris',
+    planet: 'Mars',
+    region: 'Coprates Chasma',
+    latitude: -13.9,
+    longitude: -59.2,
+    terrainClass: 'Large canyon system',
+    description: 'Deep canyon relief and wall slopes provide a rugged-terrain comparison for route screening and elevation-data interpretation.',
+  },
+  {
+    id: 'olympus-mons',
+    name: 'Olympus Mons',
+    planet: 'Mars',
+    region: 'Tharsis volcanic province',
+    latitude: 18.65,
+    longitude: -133.8,
+    terrainClass: 'Shield volcano',
+    description: 'A large volcanic edifice with broad flank gradients and summit relief, useful for planetary-scale volcanic landform comparisons.',
+  },
+  {
+    id: 'hellas-planitia',
+    name: 'Hellas Planitia',
+    planet: 'Mars',
+    region: 'Southern hemisphere basin',
+    latitude: -42.4,
+    longitude: 70.5,
+    terrainClass: 'Large impact basin',
+    description: 'A deep basin with varied rim and floor terrain, suitable for basin-scale relief and route-planning comparisons.',
+  },
+  {
+    id: 'gusev-crater',
+    name: 'Gusev Crater',
+    planet: 'Mars',
+    region: 'Aeolis quadrangle',
+    latitude: -14.6,
+    longitude: 175.3,
+    terrainClass: 'Impact crater and volcanic plains',
+    description: 'A cratered plain traversed by Spirit, useful for comparing rover-scale route context and volcanic surface mapping.',
   },
 ]
 
@@ -1245,6 +1311,17 @@ function FreeRoamPage({
       zoom: Math.max(mapInstanceRef.current.getZoom(), 2.5),
     })
   }
+  const chooseRandomCatalogLocation = () => {
+    const halfWindowDegrees = 500 / (Math.PI * (selectedBody === 'Moon' ? 1737400 : 6371008.8) / 180)
+    const candidates = [
+      ...bodyLocations.map((location) => ({ id: location.id, latitude: location.latitude })),
+      ...bodyLandmarks.map((landmark) => ({ id: `landmark-${landmark.id}`, latitude: landmark.latitude })),
+    ].filter(({ latitude }) => selectedBody !== 'Moon' || Math.abs(latitude) + halfWindowDegrees <= 60)
+    const alternatives = candidates.filter((candidate) => candidate.id !== selectedPlaceId)
+    const pool = alternatives.length ? alternatives : candidates
+    const selected = pool[Math.floor(Math.random() * pool.length)]
+    if (selected) choosePredefinedLocation(selected.id)
+  }
   const showEarthAnalog = (location: PlanetaryLocation) => {
     setMapError(null)
     setSelectedBody('Earth')
@@ -1288,18 +1365,23 @@ function FreeRoamPage({
         <label><input type="checkbox" checked={showLandmarkMarkers} onChange={(event) => setShowLandmarkMarkers(event.target.checked)} /> Exploration landmarks <span className="legend-dot history-dot" /></label>
         <span className="map-layer-count">{bodyLocations.length} catalog · {bodyLandmarks.length} landmarks</span>
       </div>
-      <label className="map-location-picker">
-        <span>Jump to a predefined location</span>
-        <select value={selectedPlaceId} onChange={(event) => choosePredefinedLocation(event.target.value)}>
-          <option value="" disabled>{selectedLocation.name === 'Map-picked location' ? 'Map-picked coordinates' : 'Choose a location'}</option>
-          <optgroup label="Catalog locations">
-            {bodyLocations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}
-          </optgroup>
-          <optgroup label="Exploration landmarks">
-            {bodyLandmarks.map((landmark) => <option key={landmark.id} value={`landmark-${landmark.id}`}>{landmark.name}</option>)}
-          </optgroup>
-        </select>
-      </label>
+      <div className="map-location-picker">
+        <label>
+          <span>Jump to a predefined location</span>
+          <select value={selectedPlaceId} onChange={(event) => choosePredefinedLocation(event.target.value)}>
+            <option value="" disabled>{selectedLocation.name === 'Map-picked location' ? 'Map-picked coordinates' : 'Choose a location'}</option>
+            <optgroup label="Catalog locations">
+              {bodyLocations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}
+            </optgroup>
+            <optgroup label="Exploration landmarks">
+              {bodyLandmarks.map((landmark) => <option key={landmark.id} value={`landmark-${landmark.id}`}>{landmark.name}</option>)}
+            </optgroup>
+          </select>
+        </label>
+        <button type="button" className="btn btn-secondary" onClick={chooseRandomCatalogLocation}>
+          <Shuffle size={16} /> Random sampleable site
+        </button>
+      </div>
 
       <div className="map-shell">
         <div className="map-card">

@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, ExternalLink, Image as ImageIcon } from 'lucide-react'
+import type * as maplibregl from 'maplibre-gl'
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import type { PlanetaryLocation } from './science/model'
+import { planetaryImagerySources } from './science/planetaryImagery'
 import { matchesLocationImage } from './science/locationImageFilter'
 
 type NasaImage = {
@@ -24,6 +27,79 @@ type NasaSearchResult = {
 
 const imageCache = new Map<string, NasaImage[]>()
 const imageApi = 'https://images-api.nasa.gov/search'
+
+function LocationSurfacePreview({ location }: { location: PlanetaryLocation }) {
+  const mapRef = useRef<HTMLDivElement | null>(null)
+  const source = planetaryImagerySources[location.body]
+  const [mapError, setMapError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!mapRef.current) return
+    setMapError(null)
+    let cancelled = false
+    let map: maplibregl.Map | null = null
+
+    import('maplibre-gl')
+      .then((maplibre) => {
+        if (cancelled || !mapRef.current) return
+        maplibre.setWorkerUrl(maplibreWorkerUrl)
+        map = new maplibre.Map({
+          container: mapRef.current,
+          style: {
+            version: 8,
+            sources: {
+              surface: {
+                type: 'raster',
+                tiles: [source.tiles],
+                tileSize: source.tileSize,
+                attribution: source.attribution,
+              },
+            },
+            layers: [{ id: 'surface-imagery', type: 'raster', source: 'surface' }],
+          },
+          center: [location.longitude, location.latitude],
+          zoom: location.body === 'Earth' ? 7 : 5,
+          maxZoom: source.maxZoom,
+          interactive: false,
+          attributionControl: { compact: true },
+        })
+        const marker = document.createElement('div')
+        marker.className = 'location-surface-marker'
+        marker.setAttribute('role', 'img')
+        marker.setAttribute('aria-label', `${location.name} selected location`)
+        new maplibre.Marker({ element: marker, anchor: 'center' })
+          .setLngLat([location.longitude, location.latitude])
+          .addTo(map)
+      })
+      .catch((cause: unknown) => {
+        if (!cancelled) setMapError(cause instanceof Error ? cause.message : String(cause))
+      })
+
+    return () => {
+      cancelled = true
+      map?.remove()
+    }
+  }, [location.body, location.latitude, location.longitude, location.name, source])
+
+  return (
+    <div className="location-surface-preview">
+      <div className="location-surface-heading">
+        <div>
+          <span className="tile-tag">Exact selected area · {location.body}</span>
+          <strong>{location.name}</strong>
+          <small>{location.latitude.toFixed(5)}°, {location.longitude.toFixed(5)}°</small>
+        </div>
+        <a href={source.tiles.replace('/tile/{z}/{y}/{x}', '')} target="_blank" rel="noreferrer" aria-label={`${location.body} imagery source`}>
+          Imagery source <ExternalLink size={13} />
+        </a>
+      </div>
+      {mapError
+        ? <p className="image-error" role="alert">Surface map unavailable: {mapError}</p>
+        : <div className="location-surface-map" ref={mapRef} role="img" aria-label={`${location.body} surface imagery centered on ${location.name}`} />}
+      <small className="image-attribution">{source.description} The marker identifies the sampled coordinate; the basemap is context imagery, not the elevation measurement.</small>
+    </div>
+  )
+}
 
 async function findLocationImages(location: PlanetaryLocation, signal: AbortSignal): Promise<NasaImage[]> {
   const cacheKey = `${location.body}:${location.name.toLowerCase()}:${location.imageQuery?.toLowerCase() ?? ''}`
@@ -108,18 +184,20 @@ export default function LocationImages({ location }: { location: PlanetaryLocati
     <section className="location-images panel-block">
       <div className="panel-head">
         <div>
-          <p className="eyebrow accent">NASA image collection</p>
+          <p className="eyebrow accent">Location-focused imagery</p>
           <h3>Location imagery</h3>
         </div>
         <button type="button" className="btn btn-secondary" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-          <ImageIcon size={16} /> {expanded ? 'Hide images' : 'Find images'}
+          <ImageIcon size={16} /> {expanded ? 'Hide archive' : 'Related archive images'}
         </button>
       </div>
 
-      {!expanded && <p>The first location-matched image loads automatically. Use the arrows to load more only when needed.</p>}
+      <LocationSurfacePreview location={location} />
+      {!expanded && <p>Exact-coordinate surface imagery remains visible above. NASA archive results are optional and name-matched.</p>}
       {expanded && isCoordinatePick && (
-        <p role="status">No coordinate-geolocated photo gallery is available for this point. Orbital basemap tiles provide the matching surface context in Free Roam; TERRA does not substitute unrelated images.</p>
+        <p role="status">This map-picked or random coordinate is centered in the surface imagery above. NASA archive records are not coordinate-geolocated, so no unrelated gallery is shown.</p>
       )}
+      {expanded && !isCoordinatePick && <p className="image-archive-note">Optional NASA archive results are related by location name and may not depict this exact footprint.</p>}
       {expanded && !isCoordinatePick && loading && <p role="status">Searching NASA’s image archive…</p>}
       {expanded && error && <p className="image-error" role="alert">{error}</p>}
       {expanded && !loading && !error && !isCoordinatePick && images.length === 0 && (
@@ -151,7 +229,7 @@ export default function LocationImages({ location }: { location: PlanetaryLocati
               <p>{activeImage.description}</p>
             </div>
             <a href={activeImage.sourceUrl} target="_blank" rel="noreferrer">
-              NASA image record <ExternalLink size={14} />
+              Related NASA image record <ExternalLink size={14} />
             </a>
           </div>
           <small className="image-attribution">NASA image and video library · Images are loaded from NASA’s public archive.</small>

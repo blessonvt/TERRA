@@ -110,9 +110,10 @@ function createSampleCoordinates(center: Coordinate, radiusMeters: number): Coor
   const points: Coordinate[] = []
   for (const latitudeOffset of [halfWindowDegrees, 0, -halfWindowDegrees]) {
     for (const longitudeMultiplier of [-1, 0, 1]) {
+      const longitude = center.longitude + longitudeMultiplier * longitudeOffset
       points.push({
         latitude: center.latitude + latitudeOffset,
-        longitude: center.longitude + longitudeMultiplier * longitudeOffset,
+        longitude: ((longitude + 180) % 360 + 360) % 360 - 180,
       })
     }
   }
@@ -165,6 +166,7 @@ async function sampleEarth(coordinate: Coordinate, signal?: AbortSignal): Promis
     source: {
       ...sourceDefinitions.Earth,
       pixelSpacingMeters: (Math.abs(latitudeResolution) + Math.abs(longitudeResolution)) / 2,
+      sampledTileIds: [],
     },
   }
 }
@@ -190,8 +192,9 @@ async function samplePlanetaryBody(
   coordinate: Coordinate,
   signal?: AbortSignal,
 ): Promise<TerrainSample> {
-  if (body === 'Moon' && Math.abs(coordinate.latitude) > 60) {
-    throw new Error('The selected LOLA/Kaguya DEM product covers only 60°N to 60°S.')
+  const halfWindowDegrees = 500 / (Math.PI * sourceDefinitions[body].radiusMeters / 180)
+  if (body === 'Moon' && Math.abs(coordinate.latitude) + halfWindowDegrees > 60) {
+    throw new Error('The full 1 km LOLA/Kaguya sampling window must fit within its 60°N to 60°S coverage.')
   }
 
   const metadata = await getMetadata(body, signal)
@@ -241,6 +244,7 @@ async function samplePlanetaryBody(
     source: {
       ...source,
       pixelSpacingMeters: (Math.abs(latitudeResolution) + Math.abs(longitudeResolution)) / 2,
+      sampledTileIds: [...uniqueTiles.values()].map(({ row, col }) => `${lod.level}/${row}/${col}`),
     },
   }
 }
