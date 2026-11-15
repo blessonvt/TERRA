@@ -2,14 +2,37 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/webp" href="/terra-logo.webp" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#101923" />
+    <meta name="theme-color" content="#080d14" />
     <meta name="description" content="Explore Earth analogs for lunar and Martian science, terrain comparison, and planetary field operations." />
     <title>TERRA — Planetary Analog Explorer</title>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { min-width: 320px; min-height: 100%; margin: 0; background: #080d14; color: #f1f4f7; font-family: "Segoe UI", Arial, sans-serif; }
+      .terra-startup { min-height: 100vh; display: grid; align-content: center; justify-items: center; gap: 12px; padding: 28px; text-align: center; background: radial-gradient(ellipse at 50% 42%, #14253b 0, #080d14 58%); }
+      .terra-startup img { width: 112px; height: 112px; object-fit: cover; border: 1px solid rgba(152, 195, 223, .25); border-radius: 24px; box-shadow: 0 18px 54px rgba(0, 0, 0, .35); }
+      .terra-startup-label { margin: 4px 0 0; color: #8fc8e7; font-size: .68rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+      .terra-startup h1 { margin: 0; font-size: clamp(1.3rem, 3vw, 1.8rem); letter-spacing: -.03em; }
+      .terra-startup p { max-width: 360px; margin: 0; color: #b7c4d2; font-size: .9rem; line-height: 1.6; }
+      .terra-startup-progress { width: min(260px, 70vw); height: 3px; margin-top: 10px; overflow: hidden; border-radius: 99px; background: rgba(255, 255, 255, .12); }
+      .terra-startup-progress span { display: block; width: 36%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #5ca9d4, #f08050); animation: terra-load 1.3s ease-in-out infinite alternate; }
+      .terra-startup-sr { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+      @keyframes terra-load { from { transform: translateX(-25%); } to { transform: translateX(190%); } }
+      @media (prefers-reduced-motion: reduce) { .terra-startup-progress span { animation: none; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main class="terra-startup" role="status" aria-live="polite">
+        <img src="/terra-logo.webp" width="112" height="112" alt="TERRA logo" />
+        <p class="terra-startup-label">Mission systems · Earth · Moon · Mars</p>
+        <h1>Preparing TERRA</h1>
+        <p>Compare planetary terrain, explore Earth analogs, and follow the evidence behind each result.</p>
+        <div class="terra-startup-progress" aria-hidden="true"><span></span></div>
+        <span class="terra-startup-sr">Loading the TERRA planetary analog explorer. Remote imagery and terrain data load on demand.</span>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

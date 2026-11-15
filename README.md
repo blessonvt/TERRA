@@ -18,6 +18,17 @@ npm run lint
 npm run test
 ```
 
+## Deploy on Netlify
+
+The repository root contains `netlify.toml` configured for the Vite app in `frontend/`, including the production build directory and client-side route fallback.
+
+1. Push the repository to GitHub.
+2. In Netlify, choose **Add new site → Import an existing project → GitHub**, authorize Netlify if asked, then select `blessonvt/TERRA`.
+3. Keep the detected settings from `netlify.toml`: base directory `frontend`, build command `npm run build`, and publish directory `dist`.
+4. Choose **Deploy site**. Netlify builds the app and provides a public URL; later pushes to the connected branch trigger new deploys automatically.
+
+No API keys or environment variables are required for the current public-data frontend. Map imagery and DEM sampling still need an internet connection at runtime.
+
 ## Integrated elevation sources
 
 | Body | Product and provider | Nominal resolution | Coverage and reference |

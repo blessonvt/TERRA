@@ -571,15 +571,13 @@ function App() {
     <BrowserRouter>
       <div className="terra-shell">
         <header className="topbar">
-          <div className="brand-block">
-            <div className="brand-badge">
-              <Globe2 size={18} />
-            </div>
-            <div>
+          <NavLink to="/" className="brand-block brand-home" aria-label="TERRA overview">
+            <img className="brand-logo" src="/terra-logo.webp" alt="TERRA" />
+            <div className="brand-copy">
               <div className="eyebrow">Planetary analog explorer</div>
-              <div className="brand-name">TERRA</div>
+              <small>Earth · Moon · Mars</small>
             </div>
-          </div>
+          </NavLink>
 
           <nav className="nav-links" aria-label="Main navigation">
             <span className="nav-section-label">Workspace</span>
@@ -614,7 +612,10 @@ function App() {
 
           <footer className="site-footer">
             <div>
-              <div className="brand-name footer-brand">TERRA</div>
+              <div className="footer-brand-block">
+                <img className="footer-logo" src="/terra-logo.webp" alt="TERRA" />
+                <span className="eyebrow">Planetary analog explorer</span>
+              </div>
               <p>Planetary analog explorer for terrain comparison and scientific context.</p>
             </div>
             <div>
