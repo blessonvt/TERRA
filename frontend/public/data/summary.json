@@ -1,0 +1,6 @@
+{
+  "totalAnalogSites": 5,
+  "totalTargetZones": 4,
+  "dataStatus": "catalog-only",
+  "note": "Catalog coordinates are reference locations; elevation measurements are sampled from public DEM services at comparison time."
+}

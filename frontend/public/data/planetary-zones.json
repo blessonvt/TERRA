@@ -1,0 +1,42 @@
+[
+  {
+    "id": "gale",
+    "name": "Gale Crater",
+    "planet": "Mars",
+    "region": "Aeolis Palus",
+    "latitude": -5.4,
+    "longitude": 137.8,
+    "terrainClass": "Sedimentary crater floor",
+    "description": "Layered sedimentary terrain with relief transitions and evidence of aqueous erosion."
+  },
+  {
+    "id": "imbrium",
+    "name": "Mare Imbrium",
+    "planet": "Moon",
+    "region": "Basaltic plain",
+    "latitude": 32.8,
+    "longitude": -15.6,
+    "terrainClass": "Lava plain",
+    "description": "Broad mare surfaces exhibit low relief and basaltic textures associated with ancient volcanism."
+  },
+  {
+    "id": "noctis",
+    "name": "Noctis Labyrinthus",
+    "planet": "Mars",
+    "region": "Canyon system",
+    "latitude": -7.9,
+    "longitude": -95.7,
+    "terrainClass": "Faulted canyon terrain",
+    "description": "Highly fractured and steep relief ridges provide a contrast case for rugged canyon landscapes."
+  },
+  {
+    "id": "aristarchus",
+    "name": "Aristarchus Plateau",
+    "planet": "Moon",
+    "region": "Highland plateau",
+    "latitude": 24.4,
+    "longitude": -47.4,
+    "terrainClass": "Highland ridge field",
+    "description": "Bright highlands, ejecta deposits, and heterogeneous slopes create a lunar highland analog case."
+  }
+]

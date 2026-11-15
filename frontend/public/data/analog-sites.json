@@ -1,0 +1,52 @@
+[
+  {
+    "id": "atacama",
+    "name": "Atacama Desert",
+    "region": "Coastal basin",
+    "country": "Chile",
+    "latitude": -24.2,
+    "longitude": -69.8,
+    "terrainClass": "Hyperarid terrain",
+    "description": "High elevation, sparse regolith, and strong evaporitic surfaces make this a useful arid analog."
+  },
+  {
+    "id": "iceland",
+    "name": "Iceland Highlands",
+    "region": "Volcanic plateau",
+    "country": "Iceland",
+    "latitude": 64.7,
+    "longitude": -18.3,
+    "terrainClass": "Basaltic rugged plain",
+    "description": "Jagged lava fields and frost-weathered ridges offer an informative volcanic comparison."
+  },
+  {
+    "id": "namib",
+    "name": "Namib Sand Sea",
+    "region": "Coastal dune field",
+    "country": "Namibia",
+    "latitude": -24.9,
+    "longitude": 15.6,
+    "terrainClass": "Aeolian dune system",
+    "description": "Wind-formed dune systems and strong mineral variability are relevant for sand-rich planetary basins."
+  },
+  {
+    "id": "hawaii",
+    "name": "Hawaii Volcanoes",
+    "region": "Shield volcano",
+    "country": "United States",
+    "latitude": 19.4,
+    "longitude": -155.3,
+    "terrainClass": "Basalt shield",
+    "description": "Recent lava flows and cinder-rich slopes reveal the texture and roughness of effusive volcanic surfaces."
+  },
+  {
+    "id": "uyuni",
+    "name": "Salar de Uyuni",
+    "region": "Bolivian salt flat",
+    "country": "Bolivia",
+    "latitude": -20.1,
+    "longitude": -67.5,
+    "terrainClass": "Evaporite plain",
+    "description": "Broad flat evaporite surfaces are useful for assessing low-relief and reflective terrain analogs."
+  }
+]

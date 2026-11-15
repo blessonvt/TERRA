@@ -1,0 +1,36 @@
+# Dependencies and generated output
+**/node_modules/
+**/dist/
+**/dist-ssr/
+**/coverage/
+*.tsbuildinfo
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.local
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Editor and operating-system files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
