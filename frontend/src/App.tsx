@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, NavLink, Route, Routes, useNavigate } from 'react-router-dom'
 import {
   BookOpen,
   Compass,
@@ -31,6 +31,11 @@ import { useEarthAnalogMatches } from './science/useEarthAnalogMatches'
 import { useTerrainComparison } from './science/useTerrainComparison'
 import type { PlanetaryBody, PlanetaryLocation } from './science/model'
 import { chooseRandomSampleableLocation } from './science/randomLocation'
+import {
+  COMPARISON_SELECTION_STORAGE_KEY,
+  parseComparisonSelection,
+} from './science/selectionStorage'
+import type { ComparisonSelection, ComparisonSide } from './science/selectionStorage'
 import { planetaryImagerySources as mapSources } from './science/planetaryImagery'
 import { formatCoordinate, nearestNamedFeature, reverseGeocodeEarth } from './placeNames'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -513,68 +518,99 @@ const planetaryLocations: PlanetaryLocation[] = [
   ...planetaryZones.map((zone) => ({ ...zone, body: zone.planet })),
 ]
 
+function loadSavedComparisonSelection() {
+  try {
+    return {
+      selection: parseComparisonSelection(window.localStorage.getItem(COMPARISON_SELECTION_STORAGE_KEY)),
+      storageError: false,
+    }
+  } catch (error) {
+    console.warn('Saved comparison locations could not be loaded.', error)
+    return { selection: null, storageError: true }
+  }
+}
+
 function App() {
   const [selectedSiteId, setSelectedSiteId] = useState(worldSites[0].id)
-  const [referenceLocation, setReferenceLocation] = useState(planetaryLocations[0])
-  const [targetLocation, setTargetLocation] = useState(planetaryLocations.find((item) => item.body === 'Mars')!)
-  const [freeRoamLocation, setFreeRoamLocation] = useState<PlanetaryLocation | null>(null)
-  const targetLocationRef = useRef(targetLocation)
-  useEffect(() => {
-    targetLocationRef.current = targetLocation
-  }, [targetLocation])
+  const [savedComparisonSelection] = useState(loadSavedComparisonSelection)
+  const [selectionStorageError, setSelectionStorageError] = useState(savedComparisonSelection.storageError)
+  const [referenceLocation, setReferenceLocation] = useState(
+    () => savedComparisonSelection.selection?.reference ?? planetaryLocations[0],
+  )
+  const [targetLocation, setTargetLocation] = useState(
+    () => savedComparisonSelection.selection?.target ?? planetaryLocations.find((item) => item.body === 'Mars')!,
+  )
+  const [freeRoamPickSide, setFreeRoamPickSide] = useState<ComparisonSide | null>(null)
+  const comparisonSelectionRef = useRef<ComparisonSelection>({
+    reference: referenceLocation,
+    target: targetLocation,
+  })
+  const persistComparisonSelection = useCallback((selection: ComparisonSelection) => {
+    try {
+      window.localStorage.setItem(COMPARISON_SELECTION_STORAGE_KEY, JSON.stringify(selection))
+      setSelectionStorageError(false)
+    } catch (error) {
+      console.error('Comparison locations could not be saved in this browser.', error)
+      setSelectionStorageError(true)
+    }
+  }, [])
+  const assignReferenceLocation = useCallback((location: PlanetaryLocation) => {
+    const selection = { ...comparisonSelectionRef.current, reference: location }
+    comparisonSelectionRef.current = selection
+    setReferenceLocation(location)
+    persistComparisonSelection(selection)
+  }, [persistComparisonSelection])
+  const assignTargetLocation = useCallback((location: PlanetaryLocation) => {
+    const selection = { ...comparisonSelectionRef.current, target: location }
+    comparisonSelectionRef.current = selection
+    setTargetLocation(location)
+    persistComparisonSelection(selection)
+  }, [persistComparisonSelection])
+  const assignComparisonLocations = useCallback((reference: PlanetaryLocation, target: PlanetaryLocation) => {
+    const selection = { reference, target }
+    comparisonSelectionRef.current = selection
+    setReferenceLocation(reference)
+    setTargetLocation(target)
+    persistComparisonSelection(selection)
+  }, [persistComparisonSelection])
   const [tutorialOpen, setTutorialOpen] = useState(false)
   const [mapFocus, setMapFocus] = useState<ExplorationLandmark | null>(null)
   const selectFreeRoamLocation = useCallback((location: PlanetaryLocation) => {
-    setFreeRoamLocation(location)
-    setReferenceLocation(location)
-    const currentTarget = targetLocationRef.current
-    const samePoint = currentTarget.body === location.body
-      && Math.abs(currentTarget.latitude - location.latitude) < 0.00001
-      && Math.abs(currentTarget.longitude - location.longitude) < 0.00001
-    if (currentTarget.id === location.id || samePoint) {
-      const alternative = planetaryLocations.find((item) => item.id !== location.id && item.body !== location.body)
-        ?? planetaryLocations.find((item) => item.id !== location.id)
-      if (alternative) setTargetLocation(alternative)
-    }
-  }, [])
+    assignReferenceLocation(location)
+  }, [assignReferenceLocation])
   const selectEarthAnalog = useCallback((location: PlanetaryLocation, target: PlanetaryLocation) => {
-    setFreeRoamLocation(location)
-    setReferenceLocation(location)
-    setTargetLocation(target)
+    assignComparisonLocations(location, target)
+  }, [assignComparisonLocations])
+  const beginFreeRoamSelection = useCallback((side: ComparisonSide) => {
+    setFreeRoamPickSide(side)
   }, [])
+  const cancelFreeRoamSelection = useCallback(() => {
+    setFreeRoamPickSide(null)
+  }, [])
+  const confirmFreeRoamSelection = useCallback((side: ComparisonSide, location: PlanetaryLocation) => {
+    if (side === 'reference') assignReferenceLocation(location)
+    else assignTargetLocation(location)
+    setFreeRoamPickSide(null)
+  }, [assignReferenceLocation, assignTargetLocation])
   const setReferenceById = (id: string) => {
-    if (freeRoamLocation?.id === id) {
-      setReferenceLocation(freeRoamLocation)
-      return
-    }
+    if (referenceLocation.id === id) return
     const location = planetaryLocations.find((item) => item.id === id)
-    if (location) setReferenceLocation(location)
+    if (location) assignReferenceLocation(location)
   }
   const setTargetById = (id: string) => {
-    if (freeRoamLocation?.id === id) {
-      setTargetLocation(freeRoamLocation)
-      return
-    }
+    if (targetLocation.id === id) return
     const location = planetaryLocations.find((item) => item.id === id)
-    if (location) setTargetLocation(location)
-  }
-  const selectRandomComparisonLocation = (side: 'reference' | 'target', body: PlanetaryBody): boolean => {
-    const current = side === 'reference' ? referenceLocation : targetLocation
-    const location = chooseRandomSampleableLocation(planetaryLocations, body, current.id)
-    if (!location) return false
-    if (side === 'reference') setReferenceLocation(location)
-    else setTargetLocation(location)
-    return true
+    if (location) assignTargetLocation(location)
   }
   const selectEarthSite = (id: string) => {
     const site = worldSites.find((item) => item.id === id)
     if (!site) return
     setSelectedSiteId(id)
-    setReferenceLocation({ ...site, body: 'Earth' })
+    assignReferenceLocation({ ...site, body: 'Earth' })
   }
   const openLandmarkOnMap = (landmark: ExplorationLandmark) => {
     setMapFocus(landmark)
-    setReferenceLocation({
+    if (!freeRoamPickSide) assignReferenceLocation({
       id: `landmark-${landmark.id}`,
       name: landmark.name,
       body: landmark.body,
@@ -613,16 +649,35 @@ function App() {
             <NavLink to="/about"><Info size={17} /><span>About TERRA</span></NavLink>
           </nav>
 
-          <div className="status-pill">EARTH · MOON · MARS</div>
+          <div className="active-assignment-strip" aria-label="Active comparison assignments">
+            {([
+              ['reference', 'REFERENCE', referenceLocation],
+              ['target', 'TARGET', targetLocation],
+            ] as const).map(([side, label, location]) => (
+              <div className={`active-assignment-card is-${side}`} key={side}>
+                <span>{label}</span>
+                <strong title={location.name}>{location.name}</strong>
+                <small>{location.body} · {location.latitude.toFixed(5)}°, {location.longitude.toFixed(5)}°</small>
+              </div>
+            ))}
+          </div>
+          {selectionStorageError && (
+            <p className="selection-storage-warning" role="status">
+              Browser storage is unavailable; assignments will last only for this session.
+            </p>
+          )}
+          <div className="status-pill">
+            {freeRoamPickSide ? `PICKING ${freeRoamPickSide.toUpperCase()}` : 'EARTH · MOON · MARS'}
+          </div>
         </header>
 
         <div className="terra-main">
           <Routes>
             <Route path="/" element={<OverviewPage summary={datasetSummary} selectedSiteId={selectedSiteId} onSelectSite={selectEarthSite} onOpenTutorial={() => setTutorialOpen(true)} />} />
-            <Route path="/free-roam" element={<FreeRoamPage locations={planetaryLocations} comparisonTarget={targetLocation} onSelectLocation={selectFreeRoamLocation} onSelectAnalog={selectEarthAnalog} focusLandmark={mapFocus} onClearFocus={setMapFocus} />} />
+            <Route path="/free-roam" element={<FreeRoamPage locations={planetaryLocations} comparisonTarget={targetLocation} selectionStartLocation={freeRoamPickSide === 'target' ? targetLocation : referenceLocation} pickFor={freeRoamPickSide} onSelectLocation={selectFreeRoamLocation} onSelectAnalog={selectEarthAnalog} onConfirmPick={confirmFreeRoamSelection} onCancelPick={cancelFreeRoamSelection} focusLandmark={mapFocus} onClearFocus={setMapFocus} />} />
             <Route path="/discover" element={<DiscoveryPage worldSites={worldSites} selectedSiteId={selectedSiteId} onSelectSite={selectEarthSite} />} />
             <Route path="/history" element={<HistoryPage onOpenLandmark={openLandmarkOnMap} />} />
-            <Route path="/compare" element={<ComparisonPage locations={planetaryLocations} reference={referenceLocation} target={targetLocation} freeRoamLocation={freeRoamLocation} onChangeReference={setReferenceById} onChangeTarget={setTargetById} onSelectRandomLocation={selectRandomComparisonLocation} />} />
+            <Route path="/compare" element={<ComparisonPage locations={planetaryLocations} reference={referenceLocation} target={targetLocation} onBeginFreeRoamSelection={beginFreeRoamSelection} onChangeReference={setReferenceById} onChangeTarget={setTargetById} />} />
             <Route path="/reports" element={<ReportsPage reference={referenceLocation} target={targetLocation} />} />
             <Route path="/methodology" element={<DatasetsPage />} />
             <Route path="/data-methodology" element={<DatasetsPage />} />
@@ -973,24 +1028,38 @@ function HistoryPage({ onOpenLandmark }: { onOpenLandmark: (landmark: Exploratio
 function FreeRoamPage({
   locations,
   comparisonTarget,
+  selectionStartLocation,
+  pickFor,
   onSelectLocation,
   onSelectAnalog,
+  onConfirmPick,
+  onCancelPick,
   focusLandmark,
   onClearFocus,
 }: {
   locations: PlanetaryLocation[]
   comparisonTarget: PlanetaryLocation
+  selectionStartLocation: PlanetaryLocation
+  pickFor: ComparisonSide | null
   onSelectLocation: (location: PlanetaryLocation) => void
   onSelectAnalog: (location: PlanetaryLocation, target: PlanetaryLocation) => void
+  onConfirmPick: (side: ComparisonSide, location: PlanetaryLocation) => void
+  onCancelPick: () => void
   focusLandmark: ExplorationLandmark | null
   onClearFocus: (value: null) => void
 }) {
+  const navigate = useNavigate()
   const mapRef = useRef<HTMLDivElement | null>(null)
+  const [initialMapBody] = useState<MapBody>(() => focusLandmark?.body ?? (pickFor ? selectionStartLocation.body : 'Earth'))
   const [initialMapTarget] = useState<[number, number] | null>(
-    () => focusLandmark ? [focusLandmark.longitude, focusLandmark.latitude] : null,
+    () => focusLandmark
+      ? [focusLandmark.longitude, focusLandmark.latitude]
+      : pickFor ? [selectionStartLocation.longitude, selectionStartLocation.latitude] : null,
   )
-  const [selectedBody, setSelectedBody] = useState<MapBody>(() => focusLandmark?.body ?? 'Earth')
-  const [selectedLocation, setSelectedLocation] = useState<PlanetaryLocation>(() => focusLandmark ? locationForLandmark(focusLandmark) : locations[0])
+  const [selectedBody, setSelectedBody] = useState<MapBody>(() => initialMapBody)
+  const [selectedLocation, setSelectedLocation] = useState<PlanetaryLocation>(
+    () => focusLandmark ? locationForLandmark(focusLandmark) : pickFor ? selectionStartLocation : locations[0],
+  )
   const [selectedLandmark, setSelectedLandmark] = useState<ExplorationLandmark | null>(focusLandmark)
   const [mapFocusCoordinate, setMapFocusCoordinate] = useState<[number, number] | null>(null)
   const [showCatalogMarkers, setShowCatalogMarkers] = useState(true)
@@ -1087,7 +1156,7 @@ function FreeRoamPage({
           if (controller.signal.aborted) return
           const resolvedLocation = { ...lookupLocation, name: result.name }
           setSelectedLocation((current) => current.id === lookupLocation.id ? resolvedLocation : current)
-          onSelectLocation(resolvedLocation)
+          if (!pickFor) onSelectLocation(resolvedLocation)
           setPlaceResolution({
             key,
             status: 'resolved',
@@ -1112,7 +1181,7 @@ function FreeRoamPage({
       window.clearTimeout(timer)
       controller.abort()
     }
-  }, [onSelectLocation, selectedLocation])
+  }, [onSelectLocation, pickFor, selectedLocation])
 
   useEffect(() => {
     markersRef.current.forEach(({ marker, locationId }) => {
@@ -1150,10 +1219,10 @@ function FreeRoamPage({
         },
         center: selectedBody === 'Earth' && mapFocusCoordinate
           ? mapFocusCoordinate
-          : initialMapTarget ?? mapSource.center,
+          : initialMapTarget && initialMapBody === selectedBody ? initialMapTarget : mapSource.center,
         zoom: selectedBody === 'Earth' && mapFocusCoordinate
           ? Math.max(mapSource.zoom, 4)
-          : initialMapTarget ? Math.max(mapSource.zoom, 2.5) : mapSource.zoom,
+          : initialMapTarget && initialMapBody === selectedBody ? Math.max(mapSource.zoom, 2.5) : mapSource.zoom,
         maxZoom: mapSource.maxZoom,
         attributionControl: { compact: true },
       })
@@ -1203,7 +1272,7 @@ function FreeRoamPage({
           setSelectedLocation(location)
           setSelectedLandmark(null)
           onClearFocus(null)
-          onSelectLocation(location)
+          if (!pickFor) onSelectLocation(location)
           mapInstanceRef.current?.flyTo({ center: [location.longitude, location.latitude], zoom: Math.max(mapInstanceRef.current.getZoom(), 2.5) })
         })
         currentMarkers.push({ marker, kind: 'catalog', locationId: location.id })
@@ -1239,7 +1308,7 @@ function FreeRoamPage({
           setSelectedLocation(location)
           setSelectedLandmark(landmark)
           onClearFocus(null)
-          onSelectLocation(location)
+          if (!pickFor) onSelectLocation(location)
           mapInstanceRef.current?.flyTo({ center: [landmark.longitude, landmark.latitude], zoom: Math.max(mapInstanceRef.current.getZoom(), 2.5) })
         })
         currentMarkers.push({ marker, kind: 'landmark', locationId: location.id })
@@ -1274,7 +1343,7 @@ function FreeRoamPage({
         setSelectedLocation(location)
         setSelectedLandmark(null)
         onClearFocus(null)
-        onSelectLocation(location)
+        if (!pickFor) onSelectLocation(location)
         map?.flyTo({ center: [wrappedLongitude, event.lngLat.lat], zoom: Math.max(map.getZoom(), 2.5) })
       })
     }).catch((error: unknown) => {
@@ -1290,7 +1359,7 @@ function FreeRoamPage({
       mapInstanceRef.current = null
       map?.remove()
     }
-  }, [bodyLandmarks, bodyLocations, initialMapTarget, mapFocusCoordinate, mapSource, onClearFocus, onSelectLocation, selectedBody, updateAnalogMarkers])
+  }, [bodyLandmarks, bodyLocations, initialMapBody, initialMapTarget, mapFocusCoordinate, mapSource, onClearFocus, onSelectLocation, pickFor, selectedBody, updateAnalogMarkers])
 
   useEffect(() => {
     markerVisibilityRef.current = { catalog: showCatalogMarkers, landmark: showLandmarkMarkers }
@@ -1312,7 +1381,7 @@ function FreeRoamPage({
     const firstLocation = locations.find((location) => location.body === body)
     if (firstLocation) {
       setSelectedLocation(firstLocation)
-      onSelectLocation(firstLocation)
+      if (!pickFor) onSelectLocation(firstLocation)
     }
   }
   const choosePredefinedLocation = (id: string) => {
@@ -1326,21 +1395,18 @@ function FreeRoamPage({
     setSelectedLocation(selected)
     setSelectedLandmark(landmark ?? null)
     onClearFocus(null)
-    onSelectLocation(selected)
+    if (!pickFor) onSelectLocation(selected)
     mapInstanceRef.current?.flyTo({
       center: [selected.longitude, selected.latitude],
       zoom: Math.max(mapInstanceRef.current.getZoom(), 2.5),
     })
   }
   const chooseRandomCatalogLocation = () => {
-    const halfWindowDegrees = 500 / (Math.PI * (selectedBody === 'Moon' ? 1737400 : 6371008.8) / 180)
     const candidates = [
-      ...bodyLocations.map((location) => ({ id: location.id, latitude: location.latitude })),
-      ...bodyLandmarks.map((landmark) => ({ id: `landmark-${landmark.id}`, latitude: landmark.latitude })),
-    ].filter(({ latitude }) => selectedBody !== 'Moon' || Math.abs(latitude) + halfWindowDegrees <= 60)
-    const alternatives = candidates.filter((candidate) => candidate.id !== selectedPlaceId)
-    const pool = alternatives.length ? alternatives : candidates
-    const selected = pool[Math.floor(Math.random() * pool.length)]
+      ...bodyLocations,
+      ...bodyLandmarks.map(locationForLandmark),
+    ]
+    const selected = chooseRandomSampleableLocation(candidates, selectedBody, selectedPlaceId)
     if (selected) choosePredefinedLocation(selected.id)
   }
   const showEarthAnalog = (location: PlanetaryLocation) => {
@@ -1353,11 +1419,22 @@ function FreeRoamPage({
     selectedCoordinateMarkerRef.current?.remove()
     selectedCoordinateMarkerRef.current = null
     onClearFocus(null)
-    if (analogTarget) onSelectAnalog(location, analogTarget)
+    if (!pickFor && analogTarget) onSelectAnalog(location, analogTarget)
   }
   const selectedPlaceId = selectedLandmark
     ? `landmark-${selectedLandmark.id}`
     : bodyLocations.some((location) => location.id === selectedLocation.id) ? selectedLocation.id : ''
+  const placeNameIsResolving = selectedLocation.isCoordinatePick
+    && selectedPlaceResolution?.status === 'resolving'
+  const confirmSelectedLocation = () => {
+    if (!pickFor) return
+    onConfirmPick(pickFor, selectedLocation)
+    navigate('/compare')
+  }
+  const cancelCoordinatePick = () => {
+    onCancelPick()
+    navigate('/compare')
+  }
 
   return (
     <main className="page-shell">
@@ -1368,6 +1445,23 @@ function FreeRoamPage({
           <p>Choose a catalog marker or click anywhere on the map to select a DEM sampling location.</p>
         </div>
       </div>
+
+      {pickFor && (
+        <section className="coordinate-pick-banner" aria-live="polite">
+          <div>
+            <p className="eyebrow accent">Coordinate acquisition · {pickFor}</p>
+            <h3>Choose a point on {selectedBody}</h3>
+            <p>Switch worlds, click the map to inspect a coordinate, then lock it as the {pickFor} location.</p>
+            <strong>{selectedLocation.name} · {selectedBody} · {selectedLocation.latitude.toFixed(5)}°, {selectedLocation.longitude.toFixed(5)}°</strong>
+          </div>
+          <div className="coordinate-pick-actions">
+            <button type="button" className="btn btn-primary" onClick={confirmSelectedLocation} disabled={placeNameIsResolving}>
+              {placeNameIsResolving ? 'Resolving place name…' : `Use as ${pickFor}`}
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={cancelCoordinatePick}>Cancel selection</button>
+          </div>
+        </section>
+      )}
 
       <div className="body-switcher" role="group" aria-label="Choose a world map">
         <button type="button" className={selectedBody === 'Earth' ? 'active' : ''} onClick={() => changeBody('Earth')}>
@@ -1443,9 +1537,11 @@ function FreeRoamPage({
           )}
           <small>{mapSource.attribution}</small>
           <p className="map-compare-note">
-            Compare <strong>{selectedLocation.name}</strong> with <strong>{comparisonTarget.name}</strong> ({comparisonTarget.body}).
+            {pickFor
+              ? <>Pending {pickFor}: <strong>{selectedLocation.name}</strong> · {selectedBody}</>
+              : <>Compare <strong>{selectedLocation.name}</strong> with <strong>{comparisonTarget.name}</strong> ({comparisonTarget.body}).</>}
           </p>
-          {analogTarget && (
+          {analogTarget && !pickFor && (
             <section className="map-analog-panel" aria-live="polite">
               <h4>Top Earth analogs</h4>
               <p>Exploratory rankings for {analogTarget.name}, based on currently available terrain measurements.</p>
@@ -1478,7 +1574,7 @@ function FreeRoamPage({
               </small>
             </section>
           )}
-          <NavLink to="/compare" className="btn btn-primary map-compare-link">Compare selected location</NavLink>
+          {!pickFor && <NavLink to="/compare" className="btn btn-primary map-compare-link">Compare selected location</NavLink>}
         </aside>
       </div>
       <LocationImages location={selectedLocation} />

@@ -3154,3 +3154,118 @@ h4 {
     min-height: 0;
   }
 }
+
+.active-assignment-strip {
+  display: grid;
+  gap: 7px;
+}
+
+.active-assignment-card {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(143, 193, 220, 0.14);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.025);
+  font-variant-numeric: tabular-nums;
+}
+
+.active-assignment-card span,
+.assignment-role {
+  color: #8fc8e7;
+  font-size: 0.61rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.active-assignment-card.is-target span,
+.assignment-card.is-target .assignment-role {
+  color: #f08050;
+}
+
+.active-assignment-card strong {
+  overflow: hidden;
+  color: #e8edf0;
+  font-size: 0.77rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.active-assignment-card small {
+  color: #9cabb4;
+  font-size: 0.67rem;
+}
+
+.selection-storage-warning {
+  margin: 0;
+  color: #e8b99a;
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.assignment-card .assignment-role {
+  margin-bottom: 5px;
+}
+
+.assignment-card .btn {
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.coordinate-pick-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  margin: 14px 0 4px;
+  padding: 18px 20px;
+  border: 1px solid rgba(143, 193, 220, 0.25);
+  border-left: 3px solid #f08050;
+  border-radius: 13px;
+  background: linear-gradient(110deg, rgba(33, 54, 70, 0.86), rgba(15, 25, 36, 0.94));
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.16);
+}
+
+.coordinate-pick-banner h3,
+.coordinate-pick-banner p {
+  margin: 5px 0;
+}
+
+.coordinate-pick-banner h3 {
+  font-size: 1.12rem;
+}
+
+.coordinate-pick-banner p:not(.eyebrow) {
+  color: #b7c5ce;
+  font-size: 0.82rem;
+}
+
+.coordinate-pick-banner > div > strong {
+  display: block;
+  margin-top: 9px;
+  color: #e4edf1;
+  font-size: 0.77rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.coordinate-pick-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .coordinate-pick-banner {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+    padding: 15px;
+  }
+
+  .coordinate-pick-actions {
+    flex-wrap: wrap;
+  }
+}

@@ -1,28 +1,22 @@
 import { useState } from 'react'
-import { AlertCircle, BarChart3, Database, Download, RefreshCw, Satellite, Scale } from 'lucide-react'
+import { AlertCircle, BarChart3, Database, Download, Map, RefreshCw, Satellite, Scale } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import LocationImages from './LocationImages'
 import { downloadComparisonCsv, downloadComparisonPdf } from './science/report'
 import { useTerrainComparison, emptyTerrainMetrics } from './science/useTerrainComparison'
 import { sourceDefinitions, sourceElevationRanges } from './science/dataSources'
 import { createMissionTestPlan, missionTestAlignment } from './science/missionTesting'
-import type { MetricKey, PlanetaryBody, PlanetaryLocation, TerrainMetrics, TerrainSample } from './science/model'
+import type { MetricKey, PlanetaryLocation, TerrainMetrics, TerrainSample } from './science/model'
+import type { ComparisonSide } from './science/selectionStorage'
 
 type Props = {
   locations: PlanetaryLocation[]
   reference: PlanetaryLocation
   target: PlanetaryLocation
-  freeRoamLocation: PlanetaryLocation | null
+  onBeginFreeRoamSelection: (side: ComparisonSide) => void
   onChangeReference: (id: string) => void
   onChangeTarget: (id: string) => void
-  onSelectRandomLocation: (side: 'reference' | 'target', body: PlanetaryBody) => boolean
 }
-
-const randomLocationOptions: Array<{ value: string; body: PlanetaryBody }> = [
-  { value: '__random_earth__', body: 'Earth' },
-  { value: '__random_moon__', body: 'Moon' },
-  { value: '__random_mars__', body: 'Mars' },
-]
 
 const metricDetails: Record<MetricKey, {
   label: string
@@ -192,14 +186,12 @@ export default function ComparisonPage({
   locations,
   reference,
   target,
-  freeRoamLocation,
+  onBeginFreeRoamSelection,
   onChangeReference,
   onChangeTarget,
-  onSelectRandomLocation,
 }: Props) {
   const [filter, setFilter] = useState<'All' | 'Terrain' | 'Environment'>('All')
   const [sortAlphabetically, setSortAlphabetically] = useState(true)
-  const [selectionMessage, setSelectionMessage] = useState('')
   const [exportMessage, setExportMessage] = useState('')
   const {
     loading,
@@ -217,19 +209,6 @@ export default function ComparisonPage({
     .sort((a, b) => sortAlphabetically
       ? metricDetails[a.key].label.localeCompare(metricDetails[b.key].label)
       : comparisons.indexOf(a) - comparisons.indexOf(b))
-  const handleLocationChange = (side: 'reference' | 'target', id: string) => {
-    const randomOption = randomLocationOptions.find((option) => option.value === id)
-    if (randomOption) {
-      const selected = onSelectRandomLocation(side, randomOption.body)
-      setSelectionMessage(selected
-        ? ''
-        : `No sampleable ${randomOption.body} catalog location is currently available.`)
-      return
-    }
-    setSelectionMessage('')
-    if (side === 'reference') onChangeReference(id)
-    else onChangeTarget(id)
-  }
   const radarKeys = comparisons
     .filter((item) => ['elevation', 'slope', 'roughness', 'localRelief'].includes(item.key))
     .filter((item) => {
@@ -319,67 +298,21 @@ export default function ComparisonPage({
 
       <div className="comparison-layout science-comparison-layout">
         <aside className="filters-card">
-          <label>
-            Reference location
-            <select value={reference.id} onChange={(event) => handleLocationChange('reference', event.target.value)}>
-              <optgroup label="Current selection">
-                <option value={reference.id}>{freeRoamLocation?.id === reference.id ? 'Free Roam point · ' : ''}{reference.name} · {reference.body}</option>
-              </optgroup>
-              {freeRoamLocation && freeRoamLocation.id !== reference.id && (
-                <optgroup label="Free Roam point">
-                  <option value={freeRoamLocation.id}>{freeRoamLocation.name} · {freeRoamLocation.body}</option>
-                </optgroup>
-              )}
-              <optgroup label="Catalog locations">
-                {locations
-                  .filter((location) => location.id !== reference.id && location.id !== freeRoamLocation?.id)
-                  .map((location) => <option key={location.id} value={location.id}>{location.name} · {location.body}</option>)}
-              </optgroup>
-              <optgroup label="Random sampleable site">
-                {randomLocationOptions.map((option) => (
-                  <option key={option.value} value={option.value}>Random {option.body} site</option>
-                ))}
-              </optgroup>
-            </select>
-          </label>
-          <label>
-            Target location
-            <select value={target.id} onChange={(event) => handleLocationChange('target', event.target.value)}>
-              <optgroup label="Current selection">
-                <option value={target.id}>{freeRoamLocation?.id === target.id ? 'Free Roam point · ' : ''}{target.name} · {target.body}</option>
-              </optgroup>
-              {freeRoamLocation && freeRoamLocation.id !== target.id && (
-                <optgroup label="Free Roam point">
-                  <option value={freeRoamLocation.id}>{freeRoamLocation.name} · {freeRoamLocation.body}</option>
-                </optgroup>
-              )}
-              <optgroup label="Catalog locations">
-                {locations
-                  .filter((location) => location.id !== target.id && location.id !== freeRoamLocation?.id)
-                  .map((location) => <option key={location.id} value={location.id}>{location.name} · {location.body}</option>)}
-              </optgroup>
-              <optgroup label="Random sampleable site">
-                {randomLocationOptions.map((option) => (
-                  <option key={option.value} value={option.value}>Random {option.body} site</option>
-                ))}
-              </optgroup>
-            </select>
-          </label>
-          <div className="free-roam-picker">
-            <p>
-              {freeRoamLocation
-                ? `Latest Free Roam point: ${freeRoamLocation.name} · ${freeRoamLocation.body}. It can be selected as either side above.`
-                : 'To compare any map coordinate, pick it in Free Roam; that point will appear in both location selectors.'}
-            </p>
-            <NavLink to="/free-roam" className="text-link">Pick a custom coordinate in Free Roam <span>→</span></NavLink>
-            <small>Random choices use catalog coordinates within DEM coverage and are sampled live. Free Roam map picks use their exact coordinates; unsupported data remain unavailable.</small>
-            {selectionMessage && <small role="status">{selectionMessage}</small>}
-          </div>
-          <div className="comparison-location">
+          <div className="comparison-location assignment-card is-reference">
+            <span className="assignment-role">Reference</span>
             <strong>{reference.name}</strong>
-            <span>{reference.body} · {reference.latitude.toFixed(3)}, {reference.longitude.toFixed(3)}</span>
+            <span>{reference.body} · {reference.latitude.toFixed(5)}°, {reference.longitude.toFixed(5)}°</span>
+            <NavLink to="/free-roam" className="btn btn-primary" onClick={() => onBeginFreeRoamSelection('reference')}>
+              <Map size={16} /> Choose from Free Roam
+            </NavLink>
+          </div>
+          <div className="comparison-location assignment-card is-target">
+            <span className="assignment-role">Target</span>
             <strong>{target.name}</strong>
-            <span>{target.body} · {target.latitude.toFixed(3)}, {target.longitude.toFixed(3)}</span>
+            <span>{target.body} · {target.latitude.toFixed(5)}°, {target.longitude.toFixed(5)}°</span>
+            <NavLink to="/free-roam" className="btn btn-secondary" onClick={() => onBeginFreeRoamSelection('target')}>
+              <Map size={16} /> Choose from Free Roam
+            </NavLink>
           </div>
           <div className="comparison-counts">
             <span>{loading ? 'Sampling sources…' : referenceError || targetError ? 'Partial data' : availableCount ? 'Comparison ready' : 'No comparable data'}</span>
